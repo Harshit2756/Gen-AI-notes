@@ -1,9 +1,9 @@
-from openai.types.chat import ChatCompletionMessageParam
 import json
 
 from dotenv import dotenv_values, load_dotenv
 from openai import OpenAI
-from openai.types.chat import (ChatCompletionSystemMessageParam,
+from openai.types.chat import (ChatCompletionMessageParam,
+                               ChatCompletionSystemMessageParam,
                                ChatCompletionUserMessageParam)
 
 # =================================== API SETUP ===================================
@@ -13,11 +13,12 @@ config = dotenv_values()
 api_key = config["GEMINI_API_KEY"]
 base_url = config['GEMINI_BASE_URL']
 
-model = "gemini-2.5-flash"
+# model = "gemini-2.5-flash"
+model = "gpt-4o"
 
 client = OpenAI(
-    api_key=api_key,
-    base_url=base_url
+    # api_key=api_key,
+    # base_url=base_url
 )
 
 print(f"{"="*30} API INFO {"="*40}")
@@ -58,30 +59,20 @@ SYSTEM_PROMPT = """
     OUTPUT: { "step": "OUTPUT": "content": "3.5" }
 """
 
-print("\n\n\n")
-
-
 system_message: ChatCompletionSystemMessageParam = {
     "role": "system",
     "content": SYSTEM_PROMPT
 }
 
-user_message: ChatCompletionUserMessageParam = {
-    "role": "user",
-    "content": "your prompt here"
-}
-
 
 message_history: list = [
-    system_message
+    system_message,{"role": "user", "content": input("👉🏻 ")
+    }
 ]
-
-user_query = input("👉🏻 ")
-message_history.append(user_message)
 
 while True:
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model=model,
         response_format={"type": "json_object"},
         messages=message_history
     )
@@ -89,7 +80,7 @@ while True:
     raw_result = response.choices[0].message.content
     message_history.append({"role": "assistant", "content": raw_result})
 
-    parsed_result = json.loads(raw_result)
+    parsed_result = json.loads(raw_result or "{}")
 
     if parsed_result.get("step") == "START":
         print("🔥", parsed_result.get("content"))
@@ -104,15 +95,3 @@ while True:
         break
 
 print("\n\n\n")
-
-
-response = client.chat.completions.create(
-    model=model,
-    messages=[
-        system_message,
-        user_message
-    ]
-)
-
-print(response.choices[0].message.content)
-# print(response.model_dump_json(indent=2))

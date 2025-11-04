@@ -19,24 +19,141 @@
 - **Prompt**: Text or instruction fed to the model.
 - **Prompt Engineering**: Structuring prompts to get the best possible output. The better the prompt, the better the output.
 
-### Types of Prompts
+### Prompting Techniques
 
 - **Zero-shot**: Asking the model to complete a task with no prior examples.
 - **One-shot**: Providing the model with one example to learn from.
 - **Few-shot**: Giving the model multiple examples to learn from.
 - **Role**: Assigning a persona to the model to influence its style, tone, and focus.
 - **Prompt chaining**: Engaging in a back-and-forth conversation with the AI.
-
-### Prompt Structure
-- **Preamble**: Context, instructions, examples—sets the stage for the model.
-- **Input**: The main request or instruction.
-- Not every component is required; structure depends on the task.
-
-
-### Reasoning Loop: Prompt Engineering Techniques
-
 - **ReAct (reason and act)**: Allow the LLM to reason and take action on a user query.
 - **CoT (chain-of-thought)**: Guide an LLM through a problem-solving process by providing examples with intermediate reasoning steps.
+- **Self-reflection**: Asking the model to evaluate its own output.
+
+
+### Prompt Structures (templates)
+
+1. Alpaca-style:
+- Alpaca prompting is a plain text template where you give the LLM a clear instruction or question, optionally with additional context/input, and the model is expected to produce a direct response ("output")—all usually within a single turn.
+- mainly used for fine-tuning open-source LLMs to follow instructions.
+[Read-more](https://github.com/tatsu-lab/stanford_alpaca?tab=readme-ov-file#data-release)
+
+- **Structure:**
+```
+Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+{instruction}[task or question for the model]
+
+### Input:
+{input}[optional extra context—often omitted for simple tasks]
+
+### Output: [model fills this in with its best response]
+```
+- **Example:**
+```
+Instruction: Summarize the following text in one sentence.
+Input: The quick brown fox jumps over the lazy dog.
+Output:
+```
+- **when to use:**
+ - Fine-tuning or training open-source LLMs for instruction-following tasks.
+ - Single-turn, direct Q&A, or text generation tasks (summarization, translation, coding, etc.).
+  - Scripting simple bots or non-conversational agents.
+  - Benchmarking or evaluating clear, short-form model instructions.
+
+2.CHATML:
+- CHATML is the prompt schema designed by OpenAI for conversational LLMs (e.g., GPT-3.5, GPT-4). It structures dialogue into distinct message blocks (system, user, assistant) using XML/Markdown-like tags, separating roles and content.
+- This format makes conversation state, persona, and histories more explicit for multi-turn chat and agentic workflows.
+
+- **Structure:**
+```
+<|im_start|>system
+{system message}
+<|im_end|>
+
+<|im_start|>user
+{user message / query}
+<|im_end|>
+
+<|im_start|>assistant
+{model output}
+<|im_end|>
+```
+
+- so the below json format is used in code to represent the messages:
+
+```
+{
+  "role": "system",
+  "content": "Sets the 'persona,' general behavior, or global instructions for the assistant"
+},
+{
+  "role": "user" ,
+  "content": "Any prompt, instruction, or query from the human user—the input that the model is to answer or respond to."
+},
+{
+  "role": "assistant",
+  "content": "The LLM’s/model’s reply or completion in response to the "user" message, influenced by the optional "system" instruction"
+}
+
+```
+
+- **Function to convert messages to CHATML format:**
+```python
+
+def to_chatml(messages):
+    chatml = ""
+    for m in messages:
+        chatml += f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>\n"
+    chatml += "<|im_start|>assistant\n"  # Leave open for AI's reply
+    return chatml
+```
+- **Example:**
+
+```python
+  messages = [{'role': 'system',
+  'content': 'You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.'},
+ {'role': 'user', 'content': 'Hello world!'},
+ {'role': 'assistant', 'content': 'Hello there!'},
+ {'role': 'system', 'content': 'Now, you are Elon Musk. Speak like him.'},
+ {'role': 'user', 'content': 'Hello world!'}]
+  chatml_prompt = to_chatml(messages)
+```
+- **when to use:**
+  - Fine-tuning or using chat-based models (OpenAI, Mistral, etc.).
+  - Multi-turn conversations, chatbots, or agentic use-cases.
+  - RAG systems and conversational memory chaining.
+  - When explicit role/context separation is needed.
+
+3.INST Format (LLaMA-2/Mistral Style)
+- The INST format is used for instruction tuning with the LLaMA-2 family. It uses clear delimiters and tags to separate instructions and responses, optimizing for direct single-turn Q&A or task completion.
+
+- **Structure:**
+```
+<<SYS>>
+{system prompt}
+<</SYS>>
+
+[INST] {instruction or user message} [/INST]
+{model response}
+
+```
+
+- **Example:**
+```
+<<SYS>>
+You are a helpful assistant that translates English to French.
+<</SYS>>
+[INST] Translate the following sentence to French: "Hello, how are you?" [/INST]
+Bonjour, comment ça va?
+```
+
+- **when to use:**
+  - Instruction-tuning open-source models (especially LLaMA-2 variants).
+  - Direct Q&A, text transformation, or task completion.
+  - Benchmarking models for short-form and role-based completions.ompts is needed.
+
 
 ### Model Guidance and Refinement
 
@@ -65,7 +182,6 @@
 
 ### Example Use Case
 Sasha’s refined prompt yields a highly relevant VPC network design suggestion (hub-and-spoke architecture). Refining and amending prompts helps articulate requirements for optimal model output.
-
 
 ### Sampling Parameters
 
